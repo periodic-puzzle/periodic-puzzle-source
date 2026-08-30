@@ -71,6 +71,16 @@ class AnimatedTile:
         self.font_path = str(ASSETS / "fonts" / "Roboto" / "static" / "Roboto-SemiBold.ttf")
         self.loop = loop
 
+        # Cache of the unrotated tile surface, keyed by the scale it was
+        # built at. WIGGLE and SLIDE tiles hold scale == 1.0 for their
+        # entire lifetime (only position/angle changes), so this lets a
+        # continuously-looping wiggle skip re-rendering text/background
+        # every frame and just rotate the same cached surface. POP/SPAWN
+        # tiles change scale every frame, so they still rebuild, but they
+        # only live for ~0.1-0.2s rather than looping indefinitely.
+        self._cached_scale_key: float | None = None
+        self._cached_tile_surf: pygame.Surface | None = None
+
     def update(self, dt: float) -> None:
         self.progress += dt / self.duration
 
@@ -110,56 +120,77 @@ class AnimatedTile:
     def is_finished(self) -> bool:
         return not self.loop and self.progress >= 1.0
 
+    def _build_tile_surf(self, w: int, h: int) -> pygame.Surface:
+        """Renders the unrotated tile (background + text + dots) at the
+        given pixel size. This is the expensive part (surface alloc, a
+        rect draw, a cached-but-still-blitted text surface, and possibly
+        a smoothscale) so callers should cache the result whenever scale
+        hasn't changed since the last frame."""
+        tile_surf = pygame.Surface((w, h), pygame.SRCALPHA)
+
+        bg_color = self.theme.background_color
+        scaled_radius = int(self.theme.border_radius * self.scale)
+        pygame.draw.rect(tile_surf, bg_color, (0, 0, w, h), border_radius=scaled_radius)
+
+        if self.scale > 0.3:
+            padded_max_w = int(self.width * 0.8)
+            padded_max_h = int(self.height * 0.8)
+            fitted_surf = get_fitted_text_surface(
+                text=self.species.formula,
+                font_path=self.font_path,
+                max_w=padded_max_w,
+                max_h=padded_max_h,
+                color=self.theme.text_color,
+                max_font_size=24
+            )
+
+            if self.scale != 1.0:
+                scaled_w = max(1, int(fitted_surf.get_width() * self.scale))
+                scaled_h = max(1, int(fitted_surf.get_height() * self.scale))
+                fitted_surf = pygame.transform.smoothscale(fitted_surf, (scaled_w, scaled_h))
+
+            text_rect = fitted_surf.get_rect(center=(w // 2, h // 2))
+            tile_surf.blit(fitted_surf, text_rect)
+
+            open_dots = getattr(self.species, "open_dots", 0)
+            if open_dots > 0:
+                draw_lewis_dots_on_surface(tile_surf, w, h, open_dots, self.theme.text_color)
+
+        return tile_surf
+
     def draw(self, surface: pygame.Surface) -> None:
             w = int(self.width * self.scale)
             h = int(self.height * self.scale)
-            
+
             if w <= 0 or h <= 0:
                 return
 
-            # 1. Create original unrotated surface
-            tile_surf = pygame.Surface((w, h), pygame.SRCALPHA)
-
-            # Draw Background
-            bg_color = self.theme.background_color
-            scaled_radius = int(self.theme.border_radius * self.scale)
-            pygame.draw.rect(tile_surf, bg_color, (0, 0, w, h), border_radius=scaled_radius)
-
-            # Draw Text
-            if self.scale > 0.3:
-                padded_max_w = int(self.width * 0.8)
-                padded_max_h = int(self.height * 0.8)
-                fitted_surf = get_fitted_text_surface(
-                    text=self.species.formula,
-                    font_path=self.font_path,
-                    max_w=padded_max_w,
-                    max_h=padded_max_h,
-                    color=self.theme.text_color,
-                    max_font_size=24
-                )
-
-                if self.scale != 1.0:
-                    scaled_w = max(1, int(fitted_surf.get_width() * self.scale))
-                    scaled_h = max(1, int(fitted_surf.get_height() * self.scale))
-                    fitted_surf = pygame.transform.smoothscale(fitted_surf, (scaled_w, scaled_h))
-
-                text_rect = fitted_surf.get_rect(center=(w // 2, h // 2))
-                tile_surf.blit(fitted_surf, text_rect)
-
-                # Draw Lewis Dots Overlay on top of tile_surf before rotation
-                open_dots = getattr(self.species, "open_dots", 0)
-                if open_dots > 0:
-                    draw_lewis_dots_on_surface(tile_surf, w, h, open_dots, self.theme.text_color)
+            # 1. Reuse the unrotated tile surface when scale hasn't moved
+            # since last frame (always true for WIGGLE/SLIDE, which hold
+            # scale == 1.0 for their whole life). Only POP/SPAWN, whose
+            # scale changes every frame, pay for a rebuild each time -
+            # and those only run for ~0.1-0.2s.
+            scale_key = round(self.scale, 3)
+            if self._cached_tile_surf is not None and self._cached_scale_key == scale_key:
+                tile_surf = self._cached_tile_surf
+            else:
+                tile_surf = self._build_tile_surf(w, h)
+                self._cached_tile_surf = tile_surf
+                self._cached_scale_key = scale_key
 
             # 2. Lock center to current animated position on screen (enables slide movement)
             center_x = int(self.current_x + self.width / 2)
             center_y = int(self.current_y + self.height / 2)
 
-            # 3. Rotate surface (Pygame expands tile_surf bounding box)
+            # 3. Rotate surface (Pygame expands tile_surf bounding box).
+            # Skip entirely when angle is 0 (the common case outside of
+            # wiggling) since rotate() would just allocate an identical copy.
             if self.angle != 0.0:
-                tile_surf = pygame.transform.rotate(tile_surf, self.angle)
+                blit_surf = pygame.transform.rotate(tile_surf, self.angle)
+            else:
+                blit_surf = tile_surf
 
-            # 4. Re-center the rotated surface onto current_x/current_y center
-            rect = tile_surf.get_rect(center=(center_x, center_y))
+            # 4. Re-center onto current_x/current_y center
+            rect = blit_surf.get_rect(center=(center_x, center_y))
 
-            surface.blit(tile_surf, rect)
+            surface.blit(blit_surf, rect)

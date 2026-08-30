@@ -4,6 +4,7 @@ import hashlib
 import uuid
 import sys
 from typing import TypedDict, TYPE_CHECKING, Any, Literal
+from pathlib import Path
 
 if TYPE_CHECKING:
     # Pylance will read this section, but Python will skip it at runtime
@@ -17,6 +18,9 @@ else:
         localStorage = None
         IS_WEB = False
 
+
+save_dir = Path(os.environ["APPDATA"]) / "Periodic Puzzle"
+save_dir.mkdir(parents=True, exist_ok=True)
 SAVE_KEY = "highscores_data"
 SAVE_FILE = "highscores.json"
 SECRET_SALT = "PeriodicPuzzleSecretSalt10910(!)#*"
@@ -46,11 +50,10 @@ def _read_save_raw() -> str | None:
     if IS_WEB and localStorage:
         return localStorage.getItem("highscores_data")
     
-    SAVE_FILE = "highscores.json"
-    if not os.path.exists(SAVE_FILE):
+    if not os.path.exists(save_dir / SAVE_FILE):
         return None
     try:
-        with open(SAVE_FILE, "r") as f:
+        with open(save_dir / SAVE_FILE, "r") as f:
             return f.read()
     except OSError:
         return None
@@ -62,7 +65,7 @@ def _write_to_disk(data: SaveJson) -> None:
         localStorage.setItem(SAVE_KEY, json_str)
     else:
         try:
-            with open(SAVE_FILE, "w") as f:
+            with open(save_dir / SAVE_FILE, "w") as f:
                 f.write(json_str)
         except OSError as e:
             print(f"Failed to save high scores: {e}")

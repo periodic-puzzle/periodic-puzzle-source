@@ -49,6 +49,13 @@ class SlidingCtx:
         self.grid_offset = to_top_left((GAME_WIDTH // 2, GAME_HEIGHT // 2), (300, 300))
         self.cell_size = (300 // grid_size, 300 // grid_size)
 
+        # Swipe-gesture tracking (covers touch on mobile web and
+        # click-drag on desktop, on top of the existing keyboard controls).
+        self.is_touch_input = False
+        self._gesture_start: tuple[float, float] | None = None
+        self.SWIPE_THRESHOLD = 40  # pixels a drag must cover to count as a swipe
+
+
         # Standard Score UI
         self.score = TextBox(pygame.Rect(GAME_WIDTH - 100, 0, 100, 50), "Score: 0")
         self.ui.add(self.score)
@@ -77,10 +84,10 @@ class SlidingCtx:
 
         # Tutorial UI Components & Manager
         self.tutorial_banner = TextBox(
-            rect=pygame.Rect(GAME_WIDTH // 2 - 250, 100, 400, 40),
+            rect=pygame.Rect(GAME_WIDTH // 2 - 200, 70, 400, 70),
             text=""
         )
-        self.skip_button = Button(pygame.Rect(GAME_WIDTH // 2 + 160, 105, 80, 30), "Skip")
+        self.skip_button = Button(pygame.Rect(10, 60, 80, 30), "Skip")
         self.skip_button.on("click", self.finish_tutorial)
 
         if self.in_tutorial:
@@ -120,6 +127,30 @@ class SlidingCtx:
         self.ui.process_event(event)
         self.grid_ui.process_event(event)
 
+        # --- Touch / mouse-drag swipe detection -----------------------
+        # FINGERDOWN/FINGERUP only ever fire on an actual touchscreen, so
+        # seeing one is a reliable signal we're on a touch device (phone
+        # or tablet in the browser) rather than desktop. Their x/y are
+        # normalized 0..1, unlike mouse events' pixel coordinates.
+        if event.type == pygame.FINGERDOWN:
+            self.is_touch_input = True
+            self._gesture_start = (event.x * GAME_WIDTH, event.y * GAME_HEIGHT)
+            return
+        elif event.type == pygame.FINGERUP:
+            self.is_touch_input = True
+            if self._gesture_start is not None:
+                self._handle_gesture_end((event.x * GAME_WIDTH, event.y * GAME_HEIGHT))
+                self._gesture_start = None
+            return
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            self._gesture_start = event.pos
+            return
+        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            if self._gesture_start is not None:
+                self._handle_gesture_end(event.pos)
+                self._gesture_start = None
+            return
+
         if event.type != pygame.KEYDOWN:
             return
 
@@ -139,48 +170,75 @@ class SlidingCtx:
                 self.ctx_manager.switch_to("sliding")
             return
 
-        if event.key in dir_map and not self.grid_view.is_animating:
-            direction = dir_map[event.key]
+        if event.key in dir_map:
+            self._dispatch_direction(dir_map[event.key])
 
-            # 1. Tutorial Movement Branch
-            if self.in_tutorial and self.tutorial_mgr:
-                # NOTE: self.grid is intentionally left pointing at the grid
-                # that was just swiped. If a reaction occurred, the manager
-                # queues the step transition instead of applying it right
-                # away, so the pop/spawn animation below still plays out
-                # against the grid that actually reacted. The swap to the
-                # next step's grid happens later in update(), once the
-                # animation has finished (see advance_if_pending()).
-                move_events = self.tutorial_mgr.handle_swipe(direction)
+    def _handle_gesture_end(self, end_pos: tuple[float, float]) -> None:
+        """Turns a drag/swipe gesture into a Directions, if it was long
+        enough and roughly axis-aligned. Short drags (taps, button clicks)
+        fall below SWIPE_THRESHOLD and are ignored here."""
+        start_x, start_y = self._gesture_start # type: ignore
+        end_x, end_y = end_pos
+        dx, dy = end_x - start_x, end_y - start_y
 
-                if move_events:
-                    self.grid_view.trigger_move(
-                        move_events=move_events,
-                        cell_size=self.cell_size,
-                        offset=self.grid_offset,
-                        spawn_pos=None,
-                        spawn_species=None,
-                    )
+        if max(abs(dx), abs(dy)) < self.SWIPE_THRESHOLD:
+            return
 
-            # 2. Regular Gameplay Branch
-            else:
-                try:
-                    move_events = self.grid.swipe(direction)
-                    spawn_pos, spawn_species = self.grid.spawn()
+        if abs(dx) > abs(dy):
+            direction = Directions.Right if dx > 0 else Directions.Left
+        else:
+            direction = Directions.Down if dy > 0 else Directions.Up
 
-                    self.grid_view.trigger_move(
-                        move_events=move_events,
-                        cell_size=self.cell_size,
-                        offset=self.grid_offset,
-                        spawn_pos=spawn_pos,
-                        spawn_species=spawn_species,
-                    )
-                except IndexError:
-                    self.grid.game_over = True
+        if self.grid.game_over:
+            return
+
+        self._dispatch_direction(direction)
+
+    def _dispatch_direction(self, direction: Directions) -> None:
+        if self.grid.game_over or self.grid_view.is_animating:
+            return
+
+        # 1. Tutorial Movement Branch
+        if self.in_tutorial and self.tutorial_mgr:
+            # NOTE: self.grid is intentionally left pointing at the grid
+            # that was just swiped. If a reaction occurred, the manager
+            # queues the step transition instead of applying it right
+            # away, so the pop/spawn animation below still plays out
+            # against the grid that actually reacted. The swap to the
+            # next step's grid happens later in update(), once the
+            # animation has finished (see advance_if_pending()).
+            move_events = self.tutorial_mgr.handle_swipe(direction)
+
+            if move_events:
+                self.grid_view.trigger_move(
+                    move_events=move_events,
+                    cell_size=self.cell_size,
+                    offset=self.grid_offset,
+                    spawn_pos=None,
+                    spawn_species=None,
+                )
+
+        # 2. Regular Gameplay Branch
+        else:
+            try:
+                move_events = self.grid.swipe(direction)
+                spawn_pos, spawn_species = self.grid.spawn()
+
+                self.grid_view.trigger_move(
+                    move_events=move_events,
+                    cell_size=self.cell_size,
+                    offset=self.grid_offset,
+                    spawn_pos=spawn_pos,
+                    spawn_species=spawn_species,
+                )
+            except IndexError:
+                self.grid.game_over = True
 
     def update(self, dt: float) -> None:
         if self.in_tutorial and self.tutorial_mgr:
-            self.tutorial_banner.text = self.tutorial_mgr.get_instruction_text()
+            self.tutorial_banner.text = self.tutorial_mgr.get_instruction_text(
+                is_touch=self.is_touch_input
+            )
 
             # Only apply a queued step transition once the slide/pop/spawn
             # animation for the reaction that triggered it has fully played.

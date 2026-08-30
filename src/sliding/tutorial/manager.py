@@ -5,7 +5,7 @@ from src.chemistry.registry import SpeciesRegistry
 class SlidingTutorialManager:
     def __init__(self, grid_size: int = 4):
         self.grid_size = grid_size
-        self.step = 1
+        self.step = 0
         self.substep = 1
         self.is_completed = False
         
@@ -19,8 +19,21 @@ class SlidingTutorialManager:
         # any in-flight animation for the current grid has finished playing.
         self._pending_advance = None
 
+        # Tracks which of the 4 directions the player has tried during the
+        # movement-only step (Step 0), so we know when to advance.
+        self.movement_directions_seen: set[Directions] = set()
+
         self.game_grid = GameGrid(grid_size=self.grid_size)
-        self.reset_step_1()
+        self.reset_step_0()
+
+    def reset_step_0(self):
+        """Step 0: Learn Movement (slide a tile in all 4 directions)."""
+        self.step = 0
+        self.substep = 1
+        self.movement_directions_seen = set()
+        self.game_grid = GameGrid(grid_size=self.grid_size)
+        center = self.grid_size // 2
+        self.game_grid.create_element(self.h_species, (center, center))
 
     def reset_step_1(self):
         """Step 1: Single reaction (H + H -> H2)."""
@@ -57,6 +70,18 @@ class SlidingTutorialManager:
         """Processes swipes and advances steps on reaction completion."""
         if self.is_completed:
             return []
+
+        if self.step == 0:
+            # Movement-only step: every direction is allowed here, and
+            # nothing reacts yet — this just teaches that swiping slides
+            # every tile on the board toward that edge.
+            events = self.game_grid.swipe(direction)
+            self.movement_directions_seen.add(direction)
+
+            if len(self.movement_directions_seen) >= 4:
+                self._pending_advance = self.reset_step_1
+
+            return events
 
         # Only permit Left/Right swipes for controlled tutorial steps
         if direction not in (Directions.Left, Directions.Right):
@@ -95,13 +120,24 @@ class SlidingTutorialManager:
             self._pending_advance = None
             advance_fn()
 
-    def get_instruction_text(self) -> str:
-        if self.step == 1:
-            return "Step 1: Press LEFT to react H + H -> H₂!"
+    def get_instruction_text(self, is_touch: bool = False) -> str:
+        action = "Swipe" if is_touch else "Press"
+        controls_hint = "" if is_touch else " (WASD / Arrow Keys)"
+
+        if self.step == 0:
+            directions_left = ", ".join(
+                d.name.upper() for d in Directions if d not in self.movement_directions_seen
+            )
+            return (
+                f"Step 0: {action}{controls_hint} to slide every tile that way! "
+                f"Try: {directions_left}"
+            )
+        elif self.step == 1:
+            return f"Step 1: {action} LEFT to react H + H -> H₂!"
         elif self.step == 2:
-            return "Step 2: Press LEFT to react Na + Cl -> NaCl (Table Salt)!"
+            return f"Step 2: {action} LEFT to react Na + Cl -> NaCl (Table Salt)!"
         elif self.step == 3:
             if self.substep == 1:
-                return "Step 3a: Multi-Step Chain! Press LEFT to react H + O -> OH (Hydroxide)."
-            return "Step 3b: Press LEFT again to react OH + H -> H₂O (Water)!"
+                return f"Step 3a: Multi-Step Chain! {action} LEFT to react H + O -> OH (Hydroxide)."
+            return f"Step 3b: {action} LEFT again to react OH + H -> H₂O (Water)!"
         return "Tutorial Complete!"

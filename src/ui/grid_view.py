@@ -36,6 +36,8 @@ def draw_lewis_dots_overlay(surface: pygame.Surface, rect: pygame.Rect, open_dot
     for i in range(min(open_dots, len(positions))):
         pygame.draw.circle(surface, color, positions[i], dot_radius)
 
+_UNBOUND = object()  # sentinel: "no species has been bound to this button yet"
+
 class GridView:
     def __init__(self, ui_manager: UIManager, grid_size: int = 4):
         self.manager = ui_manager
@@ -45,6 +47,12 @@ class GridView:
         self.pop_spawn_tiles: list[AnimatedTile] = []
         self.wiggle_tiles: list[AnimatedTile] = []
         self.static_buttons: list[Button] = []
+        # Parallel to static_buttons: which species (if any) each button's
+        # click callback is currently bound to, so _render_static_grid can
+        # skip rebinding when a cell's contents haven't changed since last
+        # frame. Kept here rather than on Button itself since it's a
+        # GridView-specific concern, not a general Button attribute.
+        self._bound_species: list[object] = []
         
         self.active_slide_targets: set[tuple[int, int]] = set()
         self.pending_pop_positions: list[tuple[int, int]] = []
@@ -63,6 +71,7 @@ class GridView:
         for btn in self.static_buttons:
             self.manager.remove(btn)
         self.static_buttons.clear()
+        self._bound_species.clear()
 
     def trigger_move(
         self,
@@ -219,6 +228,7 @@ class GridView:
                     )
                     btn = Button(rect=rect, text="", padding=int(cell_h * 0.2))
                     self.static_buttons.append(btn)
+                    self._bound_species.append(_UNBOUND)
                     self.manager.add(btn)
 
         active_anim_positions: set[tuple[int, int]] = set()
@@ -240,7 +250,6 @@ class GridView:
         for row_idx, row in enumerate(grid.grid):
             for col_idx, species in enumerate(row):
                 btn = self.static_buttons[idx]
-                btn.remove_callback("click")
                 idx += 1
 
                 btn.rect.x = col_idx * cell_w + offset_x
@@ -258,24 +267,34 @@ class GridView:
                     btn.text = ""
                     btn.theme = DefaultButtonTheme
 
-                if species is not None and species.can_keep and isinstance(species, FinishedCompound):
-                    def make_callback(r: int, c: int, spec: ChemicalSpecies, rect_pos: tuple[int, int]):
-                        def cb():
-                            if grid.grid[r][c] == spec:
-                                self.wiggle_tiles.clear()
-                                pop_tile = AnimatedTile(
-                                    species=spec,
-                                    start_px=rect_pos,
-                                    target_px=rect_pos,
-                                    size=cell_size,
-                                    duration=0.10,
-                                    mode=AnimMode.POP
-                                )
-                                self.pop_spawn_tiles.append(pop_tile)
-                                grid.pop((c, r))
-                        return cb
+                # Only rebind the click callback when the species occupying
+                # this cell actually changed since last frame. This runs
+                # every frame for every cell, so recreating a closure and
+                # touching the event list here unconditionally (as before)
+                # meant constant small allocations even while the board
+                # sits idle - this makes the common no-change case a no-op.
+                if self._bound_species[idx - 1] is not species:
+                    self._bound_species[idx - 1] = species
+                    btn.remove_callback("click")
 
-                    btn.on("click", callback=make_callback(row_idx, col_idx, species, btn.rect.topleft))
+                    if species is not None and species.can_keep and isinstance(species, FinishedCompound):
+                        def make_callback(r: int, c: int, spec: ChemicalSpecies, rect_pos: tuple[int, int]):
+                            def cb():
+                                if grid.grid[r][c] == spec:
+                                    self.wiggle_tiles.clear()
+                                    pop_tile = AnimatedTile(
+                                        species=spec,
+                                        start_px=rect_pos,
+                                        target_px=rect_pos,
+                                        size=cell_size,
+                                        duration=0.10,
+                                        mode=AnimMode.POP
+                                    )
+                                    self.pop_spawn_tiles.append(pop_tile)
+                                    grid.pop((c, r))
+                            return cb
+
+                        btn.on("click", callback=make_callback(row_idx, col_idx, species, btn.rect.topleft))
 
                 btn.draw(surface)
                 if (col_idx, row_idx) not in masked_positions and species is not None:

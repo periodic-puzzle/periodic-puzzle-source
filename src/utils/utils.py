@@ -18,6 +18,25 @@ def parse_rgb(rgb: str) -> tuple[int, int, int]:
 
 _TEXT_SURFACE_CACHE: dict[tuple[str, str, int, int, tuple[int, int, int] | tuple[int, int, int, int]], pygame.Surface] = {}
 
+def _wrap_lines(text: str, font: pygame.font.Font, max_line_w: int) -> list[str]:
+    """Greedily wraps text on word boundaries so each line fits within max_line_w."""
+    words = text.split(" ")
+    lines: list[str] = []
+    current = ""
+
+    for word in words:
+        candidate = f"{current} {word}".strip()
+        if font.size(candidate)[0] <= max_line_w or not current:
+            current = candidate
+        else:
+            lines.append(current)
+            current = word
+
+    if current:
+        lines.append(current)
+
+    return lines
+
 def get_fitted_text_surface(
     text: str,
     font_path: str,
@@ -27,7 +46,8 @@ def get_fitted_text_surface(
     max_font_size: int = 24,
     min_font_size: int = 8
 ) -> pygame.Surface:
-    """Returns a pre-rendered text surface cached by parameters, scaled to fit within max_w and max_h."""
+    """Returns a pre-rendered text surface, cached by parameters, wrapped and
+    scaled to fit within max_w and max_h at the largest font size that fits."""
     cache_key = (text, font_path, max_w, max_h, color)
     if cache_key in _TEXT_SURFACE_CACHE:
         return _TEXT_SURFACE_CACHE[cache_key]
@@ -39,21 +59,41 @@ def get_fitted_text_surface(
     best_surf = None
     for size in range(max_font_size, min_font_size - 1, -1):
         font = pygame.font.Font(font_path, size)
-        w, h = font.size(text)
-        if w <= target_w and h <= target_h:
-            best_surf = font.render(text, True, color)
+        lines = _wrap_lines(text, font, target_w)
+        line_h = font.get_linesize()
+        total_h = line_h * len(lines)
+        widest_line = max((font.size(line)[0] for line in lines), default=0)
+
+        if widest_line <= target_w and total_h <= target_h:
+            surf = pygame.Surface((target_w, total_h), pygame.SRCALPHA)
+            for i, line in enumerate(lines):
+                line_surf = font.render(line, True, color)
+                surf.blit(line_surf, line_surf.get_rect(centerx=target_w // 2, top=i * line_h))
+            best_surf = surf
             break
 
-    # Fallback to minimum size scaled down if text is extremely long
+    # Fallback: render at minimum size (wrapped) and scale the whole block
+    # down further if it's still too big — keeps extremely long text legible
+    # rather than clipped, at the cost of going below min_font_size.
     if best_surf is None:
         font = pygame.font.Font(font_path, min_font_size)
-        raw_surf = font.render(text, True, color)
+        lines = _wrap_lines(text, font, target_w)
+        line_h = font.get_linesize()
+        total_h = line_h * len(lines)
+        widest_line = max((font.size(line)[0] for line in lines), default=1)
+
+        raw_surf = pygame.Surface((widest_line, total_h), pygame.SRCALPHA)
+        for i, line in enumerate(lines):
+            line_surf = font.render(line, True, color)
+            raw_surf.blit(line_surf, line_surf.get_rect(centerx=widest_line // 2, top=i * line_h))
+
         scale = min(target_w / raw_surf.get_width(), target_h / raw_surf.get_height())
         new_size = (max(1, int(raw_surf.get_width() * scale)), max(1, int(raw_surf.get_height() * scale)))
         best_surf = pygame.transform.smoothscale(raw_surf, new_size)
 
     _TEXT_SURFACE_CACHE[cache_key] = best_surf
     return best_surf
+
 
 from random import choices
 
