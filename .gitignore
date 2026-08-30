@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+.git/
+build/
+dist/
+web/
+archive/
+*.zip
+*.7z
+.env.local
+icon.ico
+highscores.json
+*.spec
+.vercel
+.env*
+web-build/
