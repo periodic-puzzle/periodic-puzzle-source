@@ -166,7 +166,7 @@ class SlidingCtx:
         }
 
         if self.grid.game_over:
-            if event.key == pygame.K_r:
+            if event.key == pygame.K_r or event.key == pygame.FINGERDOWN:
                 self.ctx_manager.switch_to("sliding")
             return
 
