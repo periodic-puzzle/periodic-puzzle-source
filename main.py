@@ -127,26 +127,39 @@ class SlidingCtx:
         self.ui.process_event(event)
         self.grid_ui.process_event(event)
 
-        # --- Touch / mouse-drag swipe detection -----------------------
-        # FINGERDOWN/FINGERUP only ever fire on an actual touchscreen, so
-        # seeing one is a reliable signal we're on a touch device (phone
-        # or tablet in the browser) rather than desktop. Their x/y are
-        # normalized 0..1, unlike mouse events' pixel coordinates.
+        # --- Touch / mouse-drag swipe & tap detection -----------------------
         if event.type == pygame.FINGERDOWN:
             self.is_touch_input = True
             self._gesture_start = (event.x * GAME_WIDTH, event.y * GAME_HEIGHT)
             return
+
         elif event.type == pygame.FINGERUP:
             self.is_touch_input = True
             if self._gesture_start is not None:
-                self._handle_gesture_end((event.x * GAME_WIDTH, event.y * GAME_HEIGHT))
+                end_pos = (event.x * GAME_WIDTH, event.y * GAME_HEIGHT)
+                
+                # Check if game is over; any tap on screen will restart
+                if self.grid.game_over:
+                    self.ctx_manager.switch_to("sliding")
+                    self._gesture_start = None
+                    return
+
+                self._handle_gesture_end(end_pos)
                 self._gesture_start = None
             return
+
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             self._gesture_start = event.pos
             return
+
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             if self._gesture_start is not None:
+                # Handle reset for mouse clicks as well if game over
+                if self.grid.game_over:
+                    self.ctx_manager.switch_to("sliding")
+                    self._gesture_start = None
+                    return
+
                 self._handle_gesture_end(event.pos)
                 self._gesture_start = None
             return
@@ -166,7 +179,7 @@ class SlidingCtx:
         }
 
         if self.grid.game_over:
-            if event.key == pygame.K_r or event.key == pygame.FINGERDOWN:
+            if event.key == pygame.K_r:
                 self.ctx_manager.switch_to("sliding")
             return
 
