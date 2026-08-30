@@ -1,0 +1,104 @@
+# Deprecated File
+[defaults.reactive]
+tier = 1
+spawn_weight = 100
+can_spawn = false
+
+[defaults.compound]
+tier = 1
+can_spawn = false
+can_keep = false
+
+[defaults.intermediate]
+tier = 1
+can_keep = true
+can_spawn = false
+
+# -------------------------
+# Reactive species
+# -------------------------
+
+[[intermediate]]
+id = "NH"
+name = "Ammonia Intermediate"
+formula = "NH"
+charge = -2
+category = "BASE"
+
+[[intermediate]]
+id = "NH2"
+name = "Ammonia Intermediate"
+formula = "NH₂"
+charge = -1
+category = "BASE"
+
+
+[[intermediate]]
+id = "NH4CO3"
+name = "Ammonium Carbonate Intermediate"
+formula = "NH₄CO₃"
+charge = -1
+category = "POLYATOMIC_ANION"
+
+[[intermediate]]
+id = "NaO"
+name = "Sodium Oxide Intermediate"
+formula = "NaO"
+charge = -1
+category = "POLYATOMIC_ANION"
+
+[[intermediate]]
+id = "MgCl"
+name = "Magnesium Chloride Intermediate"
+formula = "MgCl"
+charge = 1
+category = "POLYATOMIC_CATION"
+
+[[intermediate]]
+id = "MgOH"
+name = "Magnesium Hydroxide Intermediate"
+formula = "MgOH"
+charge = 1
+category = "BASE"
+
+[[intermediate]]
+id = "MgNO3"
+name = "Magnesium Nitrate Intermediate"
+formula = "MgNO₃"
+charge = 1
+category = "POLYATOMIC_CATION"
+
+[[intermediate]]
+id = "CH"
+name = "Methane Intermediate"
+formula = "CH"
+charge = -3
+category = "ORGANIC_RADICAL"
+
+[[intermediate]]
+id = "CH2"
+name = "Methane Intermediate"
+formula = "CH₂"
+charge = -2
+category = "ORGANIC_RADICAL"
+
+[[intermediate]]
+id = "CH3"
+name = "Methane Intermediate"
+formula = "CH₃"
+charge = -1
+category = "ORGANIC_RADICAL"
+
+[[intermediate]]
+id = "C2H5"
+name = "Ethane Intermediate"
+formula = "C₂H₅"
+charge = -1
+category = "ORGANIC_RADICAL"
+
+[[intermediate]]
+id = "NaCO3"
+name = "Sodium Carbonate Intermediate"
+formula = "NaCO₃"
+charge = -1
+category = "SALT"

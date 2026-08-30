@@ -1,0 +1,127 @@
+# Defaults applied by the loader
+[defaults.reactive]
+tier = 1
+spawn_weight = 100
+can_spawn = false
+
+[defaults.compound]
+tier = 1
+can_spawn = false
+can_keep = false
+
+
+[[reactive]]
+id = "Na"
+name = "Sodium"
+formula = "Na"
+charge = 1
+oxidation_states = [1]
+category = "ALKALI_METAL"
+can_spawn = true
+spawn_weight = 80
+unlock_tier = 1
+open_dots = 1
+
+[[reactive]]
+id = "Cl"
+name = "Chloride"
+formula = "Cl"
+charge = -1
+oxidation_states = [-1]
+category = "HALOGEN"
+can_spawn = true
+spawn_weight = 100
+unlock_tier = 1
+open_dots = 7
+
+[[reactive]]
+id = "C"
+name = "Carbon"
+formula = "C"
+charge = -4
+oxidation_states = [-4, 4]
+category = "CARBON_GROUP"
+can_spawn = true
+spawn_weight = 40
+unlock_tier = 3
+open_dots = 4
+
+[[reactive]]
+id = "O"
+name = "Oxygen"
+formula = "O"
+charge = -2
+oxidation_states = [-2]
+category = "CHALCOGEN"
+can_spawn = true
+spawn_weight = 100
+unlock_tier = 1
+open_dots = 6
+
+[[reactive]]
+id = "Mg"
+name = "Magnesium"
+formula = "Mg"
+charge = 2
+oxidation_states = [2]
+category = "ALKALINE_EARTH_METAL"
+can_spawn = true
+spawn_weight = 50
+unlock_tier = 2
+open_dots = 2
+
+[[reactive]]
+id = "H"
+name = "Hydrogen"
+formula = "H"
+charge = 1
+oxidation_states = [1, -1]
+category = "HYDROGEN"
+can_spawn = true
+spawn_weight = 130
+unlock_tier = 1
+open_dots = 1
+
+[[reactive]]
+id = "N"
+name = "Nitrogen"
+formula = "N"
+charge = -3
+oxidation_states = [-3, 5]
+category = "PNICTOGEN"
+can_spawn = true
+spawn_weight = 70
+unlock_tier = 2
+open_dots = 5
+
+[[reactive]]
+id = "ClO"
+name = "Hypochlorite"
+formula = "ClO"
+charge = -1
+oxidation_states = [-1]
+category = "POLYATOMIC_ANION"
+
+[[reactive]]
+id = "ClO2"
+name = "Chlorite"
+formula = "ClO₂"
+charge = -1
+oxidation_states = [-1]
+category = "POLYATOMIC_ANION"
+
+[[reactive]]
+id = "ClO3"
+name = "Chlorate"
+formula = "ClO₃"
+charge = -1
+oxidation_states = [-1]
+category = "POLYATOMIC_ANION"
+
+[[reactive]]
+id = "ClO4"
+name = "Perchlorate"
+formula = "ClO₄"
+charge = -1
+oxidation_states = [-1]
+category = "POLYATOMIC_ANION"

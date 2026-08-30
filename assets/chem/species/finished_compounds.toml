@@ -1,0 +1,356 @@
+[defaults.reactive]
+tier = 1
+spawn_weight = 100
+can_spawn = false
+
+[defaults.compound]
+tier = 1
+can_spawn = false
+can_keep = false
+coefficients = [1,1,1]
+
+# Salts
+
+[[compound]]
+id = "NaCl"
+name = "Sodium Chloride"
+formula = "NaCl"
+category = "SALT"
+points = 20
+coefficients = [2, 1, 2]
+
+[[compound]]
+id = "NaNO3"
+name = "Sodium Nitrate"
+formula = "NaNO₃"
+category = "SALT"
+points = 45
+coefficients = [1, 1, 1]
+
+[[compound]]
+id = "MgCl2"
+name = "Magnesium Chloride"
+formula = "MgCl₂"
+category = "SALT"
+points = 25
+coefficients = [1, 1, 1]
+
+[[compound]]
+id = "MgO"
+name = "Magnesium Oxide"
+formula = "MgO"
+category = "SALT"
+points = 10
+coefficients = [2, 1, 2]
+
+[[compound]]
+id = "Mg(NO3)2"
+name = "Magnesium Nitrate"
+formula = "Mg(NO₃)₂"
+category = "SALT"
+points = 70
+coefficients = [1, 2, 1]
+
+[[compound]]
+id = "CH4"
+name = "Methane"
+formula = "CH₄"
+category = "HYDROCARBON"
+points = 25
+coefficients = [1, 4, 1]
+
+[[compound]]
+id = "C2H6"
+name = "Ethane"
+formula = "C₂H₆"
+category = "HYDROCARBON"
+points = 60
+coefficients = [2, 6, 1]
+
+[[compound]]
+id = "C3H8"
+name = "Propane"
+formula = "C₃H₈"
+category = "HYDROCARBON"
+points = 130
+coefficients = [3, 8, 1]
+
+[[compound]]
+id = "CH3OH"
+name = "Methanol"
+formula = "CH₃OH"
+category = "ALCOHOL"
+points = 45
+
+[[compound]]
+id = "CH2O"
+name = "Formaldehyde"
+formula = "CH₂O"
+category = "ALDEHYDE"
+points = 45
+
+[[compound]]
+id = "C2H5OH"
+name = "Ethanol"
+formula = "C₂H₅OH"
+category = "ALCOHOL"
+points = 75
+
+[[compound]]
+id = "CO"
+name = "Carbon Monoxide"
+formula = "CO"
+category = "NEUTRAL_COMPOUND"
+points = 20
+can_keep = true
+
+[[compound]]
+id = "CO2"
+name = "Carbon Dioxide"
+formula = "CO₂"
+category = "ACID_ANHYDRIDE"
+points = 30
+can_keep=true
+
+[[compound]]
+id = "NaOH"
+name = "Sodium Hydroxide"
+formula = "NaOH"
+category = "BASE"
+points = 40
+
+[[compound]]
+id = "NO"
+name = "Nitric Oxide"
+formula = "NO"
+category = "NEUTRAL_COMPOUND"
+points = 20
+can_keep=true
+
+[[compound]]
+id = "NO2"
+name = "Nitrogen Dioxide"
+formula = "NO₂"
+category = "ACID_ANHYDRIDE"
+points = 30
+can_keep=true
+
+[[compound]]
+id = "N2O"
+name = "Nitrous Oxide"
+formula = "N₂O"
+category = "NEUTRAL_COMPOUND"
+points = 25
+
+[[compound]]
+id = "NH3"
+name = "Ammonia"
+formula = "NH₃"
+category = "BASE"
+points = 40
+can_keep=true
+
+[[compound]]
+id = "HNO3"
+name = "Nitric Acid"
+formula = "HNO₃"
+category = "OXOACID"
+points = 45
+
+[[compound]]
+id = "N2H4"
+name = "Hydrazine"
+formula = "N₂O₄"
+category = "BASE"
+points = 70
+
+[[compound]]
+id = "H2O"
+name = "Water"
+formula = "H₂O"
+category = "NEUTRAL_COMPOUND"
+points = 30
+can_keep=true
+
+[[compound]]
+id = "H2O2"
+name = "Hydrogen Peroxide"
+formula = "H₂O₂"
+category = "PEROXIDE"
+points = 50
+
+[[compound]]
+id = "H2CO3"
+name = "Carbonic Acid"
+formula = "H₂CO₃"
+category = "OXOACID"
+points = 65
+
+[[compound]]
+id = "Na2CO3"
+name = "Sodium Carbonate"
+formula = "Na₂CO₃"
+category = "BASE"
+points = 65
+
+[[compound]]
+id = "NaHCO3"
+name = "Sodium Bicarbonate"
+formula = "NaHCO₃"
+category = "BASE"
+points = 75
+
+[[compound]]
+id = "MgCO3"
+name = "Magnesium Carbonate"
+formula = "MgCO₃"
+category = "BASE"
+points = 75
+
+[[compound]]
+id = "Mg(OH)2"
+name = "Magnesium Hydroxide"
+formula = "Mg(OH)₂"
+category = "BASE"
+points = 100
+
+[[compound]]
+id = "NaClO"
+name = "Sodium Hypochlorite"
+formula = "NaClO"
+category = "BASE"
+points = 40
+
+[[compound]]
+id = "NaClO2"
+name = "Sodium Chlorite"
+formula = "NaClO₂"
+category = "BASE"
+points = 60
+
+[[compound]]
+id = "NaClO3"
+name = "Sodium Chlorate"
+formula = "NaClO₃"
+category = "SALT"
+points = 90
+
+[[compound]]
+id = "NaClO4"
+name = "Sodium Perchlorate"
+formula = "NaClO₄"
+category = "SALT"
+points = 150
+
+[[compound]]
+id = "HCl"
+name = "Hydrochloric Acid"
+formula = "HCl"
+category = "ACID"
+points = 20
+
+[[compound]]
+id = "HClO"
+name = "Hypochlorous Acid"
+formula = "HClO"
+category = "OXOACID"
+points = 40
+
+[[compound]]
+id = "HClO2"
+name = "Chlorous Acid"
+formula = "HClO₂"
+category = "OXOACID"
+points = 60
+
+[[compound]]
+id = "HClO3"
+name = "Chloric Acid"
+formula = "HClO₃"
+category = "OXOACID"
+points = 90
+
+[[compound]]
+id = "HClO4"
+name = "Perchloric Acid"
+formula = "HClO₄"
+category = "OXOACID"
+points = 150
+
+[[compound]]
+id = "Cl2"
+name = "Diatomic Chlorine"
+formula = "Cl₂"
+category = "HALOGEN"
+points = 10
+
+[[compound]]
+id = "O2"
+name = "Diatomic Oxygen"
+formula = "O₂"
+category = "CHALCOGEN"
+points = 10
+
+[[compound]]
+id = "H2"
+name = "Diatomic Hydrogen"
+formula = "H₂"
+category = "HYDROGEN"
+points = 10
+open_dots = 2
+
+[[compound]]
+id = "N2"
+name = "Diatomic Nitrogen"
+formula = "N₂"
+category = "PNICTOGEN"
+points = 15
+
+[[compound]]
+id = "Na2O"
+name = "Sodium Oxide"
+formula = "Na₂O"
+category = "SALT"
+points = 15
+
+[[compound]]
+id = "NH4Cl"
+name = "Ammonium Chloride"
+formula = "NH₄Cl"
+category = "SALT"
+points = 60
+
+[[compound]]
+id = "NH4ClO3"
+name = "Ammonium Chlorate"
+formula = "NH₄ClO₃"
+category = "SALT"
+points = 100
+
+[[compound]]
+id = "NH4ClO4"
+name = "Ammonium Perchlorate"
+formula = "NH₄ClO₄"
+category = "SALT"
+points = 130
+
+[[compound]]
+id = "NH4NO3"
+name = "Ammonium Nitrate"
+formula = "NH₄NO₃"
+category = "SALT"
+points = 130
+
+[[compound]]
+id = "(NH4)2CO3"
+name = "Ammonium Carbonate"
+formula = "(NH₄)₂CO₃"
+category = "SALT"
+points = 220
+
+[[compound]]
+id = "NH4HCO3"
+name = "Ammonium Bicarbonate"
+formula = "(NH₄)HCO₃"
+category = "SALT"
+points = 130

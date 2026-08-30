@@ -1,0 +1,50 @@
+# Defaults applied by the loader
+[defaults.reactive]
+tier = 1
+spawn_weight = 100
+can_spawn = false
+
+[defaults.compound]
+tier = 1
+can_spawn = false
+can_keep = false
+
+[[reactive]]
+id = "NH4"
+name = "Ammonium"
+formula = "NH₄"
+charge = +1
+oxidation_states = [+1]
+category = "POLYATOMIC_CATION"
+
+[[reactive]]
+id = "NO3"
+name = "Nitrate"
+formula = "NO₃"
+charge = -1
+oxidation_states = [-1]
+category = "POLYATOMIC_ANION"
+
+[[reactive]]
+id = "OH"
+name = "Hydroxide"
+formula = "OH"
+charge = -1
+oxidation_states = [-1]
+category = "POLYATOMIC_ANION"
+
+[[reactive]]
+id = "CO3"
+name = "Carbonate"
+formula = "CO₃"
+charge = -2
+oxidation_states = [-2]
+category = "POLYATOMIC_ANION"
+
+[[reactive]]
+id = "HCO3"
+name = "Bicarbonate"
+formula = "HCO₃"
+charge = -1
+oxidation_states = [-1]
+category = "POLYATOMIC_ANION"
