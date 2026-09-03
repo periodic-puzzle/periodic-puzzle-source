@@ -49,6 +49,36 @@ COMPOUND_POOL = [
     Compound("H2SO4", "Sulfuric acid", ["Sulfuric acid", "Sulfurous acid", "Hydrosulfuric acid", "Hydrogen sulfate"]),
     Compound("HNO3", "Nitric acid", ["Nitric acid", "Nitrous acid", "Hydronitric acid", "Hydrogen nitrate"]),
     Compound("CH3COOH", "Acetic acid", ["Acetic acid", "Ethanoic acid", "Carbonic acid", "Formic acid"]),
+
+    # --- Batch 2: More Binary & Transition Metal Compounds ---
+    Compound("BaCl2", "Barium chloride", ["Barium chloride", "Barium dichloride", "Monobarium chloride", "Barium chlorate"]),
+    Compound("AlCl3", "Aluminum chloride", ["Aluminum chloride", "Aluminum trichloride", "Dialuminum chloride", "Aluminum chlorate"]),
+    Compound("MgCl2", "Magnesium chloride", ["Magnesium chloride", "Magnesium dichloride", "Monomagnesium chloride", "Magnesium chlorate"]),
+    Compound("ZnCl2", "Zinc chloride", ["Zinc chloride", "Zinc dichloride", "Monozinc chloride", "Zinc chlorate"]),
+    Compound("CuCl2", "Copper(II) chloride", ["Copper(II) chloride", "Copper(I) chloride", "Copper dichloride", "Copper chlorate"]),
+    Compound("FeCl2", "Iron(II) chloride", ["Iron(II) chloride", "Iron(III) chloride", "Iron dichloride", "Ferric chloride"]),
+    Compound("FeCl3", "Iron(III) chloride", ["Iron(III) chloride", "Iron(II) chloride", "Iron trichloride", "Ferrous chloride"]),
+    Compound("AgCl", "Silver chloride", ["Silver chloride", "Silver(I) chloride", "Silver monochloride", "Silver chlorate"]),
+    Compound("CuO", "Copper(II) oxide", ["Copper(II) oxide", "Copper(I) oxide", "Copper dioxide", "Cupric peroxide"]),
+    Compound("Cu2O", "Copper(I) oxide", ["Copper(I) oxide", "Copper(II) oxide", "Dicopper oxide", "Cuprous peroxide"]),
+
+    # --- Batch 2: More Polyatomic Compounds ---
+    Compound("Na2CO3", "Sodium carbonate", ["Sodium carbonate", "Sodium bicarbonate", "Disodium carbonate", "Sodium carbonite"]),
+    Compound("K2SO4", "Potassium sulfate", ["Potassium sulfate", "Potassium sulfite", "Dipotassium sulfate", "Potassium sulfide"]),
+    Compound("CaSO4", "Calcium sulfate", ["Calcium sulfate", "Calcium sulfite", "Calcium sulfide", "Monocalcium sulfate"]),
+    Compound("BaSO4", "Barium sulfate", ["Barium sulfate", "Barium sulfite", "Barium sulfide", "Monobarium sulfate"]),
+    Compound("Ca3(PO4)2", "Calcium phosphate", ["Calcium phosphate", "Calcium diphosphate", "Calcium phosphite", "Calcium phosphide"]),
+    Compound("Pb(NO3)2", "Lead(II) nitrate", ["Lead(II) nitrate", "Lead(IV) nitrate", "Lead dinitrate", "Lead nitrite"]),
+    Compound("KOH", "Potassium hydroxide", ["Potassium hydroxide", "Potassium oxide", "Potassium hydride", "Potassium monohydroxide"]),
+    Compound("Mg(OH)2", "Magnesium hydroxide", ["Magnesium hydroxide", "Magnesium oxide", "Magnesium dihydroxide", "Magnesium hydride"]),
+
+    # --- Batch 2: More Covalent Compounds & Acids ---
+    Compound("SO2", "Sulfur dioxide", ["Sulfur dioxide", "Sulfur trioxide", "Monosulfur dioxide", "Sulfur oxide"]),
+    Compound("N2O", "Dinitrogen monoxide", ["Dinitrogen monoxide", "Nitrogen dioxide", "Dinitrogen oxide", "Nitrogen monoxide"]),
+    Compound("CCl4", "Carbon tetrachloride", ["Carbon tetrachloride", "Monocarbon tetrachloride", "Carbon quadchloride", "Dicarbon tetrachloride"]),
+    Compound("SiO2", "Silicon dioxide", ["Silicon dioxide", "Silicon monoxide", "Monosilicon dioxide", "Silicon oxide"]),
+    Compound("HBr", "Hydrobromic acid", ["Hydrobromic acid", "Bromic acid", "Hydrogen bromide", "Perbromic acid"]),
+    Compound("H2CO3", "Carbonic acid", ["Carbonic acid", "Carbonous acid", "Hydrocarbonic acid", "Carbon acid"]),
 ]
 
 

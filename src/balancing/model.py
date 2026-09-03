@@ -61,6 +61,35 @@ SAMPLE_EQUATIONS = [
     {"reactants": ["AgNO3", "Cu"], "products": ["Cu(NO3)2", "Ag"], "difficulty": "hard", "points": 500},
     {"reactants": ["HCl", "NaOH"], "products": ["NaCl", "H2O"], "difficulty": "hard", "points": 500},
     {"reactants": ["Al", "HCl"], "products": ["AlCl3", "H2"], "difficulty": "hard", "points": 500},
+
+    # --- Batch 2 ---
+
+    # Easy (Base: 100 pts)
+    {"reactants": ["Ca", "O2"], "products": ["CaO"], "difficulty": "easy", "points": 100},
+    {"reactants": ["Cu", "O2"], "products": ["CuO"], "difficulty": "easy", "points": 100},
+    {"reactants": ["Li", "O2"], "products": ["Li2O"], "difficulty": "easy", "points": 100},
+    {"reactants": ["Ba", "O2"], "products": ["BaO"], "difficulty": "easy", "points": 100},
+    {"reactants": ["Zn", "O2"], "products": ["ZnO"], "difficulty": "easy", "points": 100},
+    {"reactants": ["N2", "O2"], "products": ["NO"], "difficulty": "easy", "points": 100},
+    {"reactants": ["H2", "F2"], "products": ["HF"], "difficulty": "easy", "points": 100},
+    {"reactants": ["Mg", "N2"], "products": ["Mg3N2"], "difficulty": "easy", "points": 100},
+
+    # Medium (Base: 250 pts)
+    {"reactants": ["C2H4", "O2"], "products": ["CO2", "H2O"], "difficulty": "medium", "points": 250},
+    {"reactants": ["Mg", "HCl"], "products": ["MgCl2", "H2"], "difficulty": "medium", "points": 250},
+    {"reactants": ["NaHCO3"], "products": ["Na2CO3", "H2O", "CO2"], "difficulty": "medium", "points": 250},
+    {"reactants": ["H2O2"], "products": ["H2O", "O2"], "difficulty": "medium", "points": 250},
+    {"reactants": ["Pb(NO3)2", "KI"], "products": ["PbI2", "KNO3"], "difficulty": "medium", "points": 250},
+    {"reactants": ["BaCl2", "Na2SO4"], "products": ["BaSO4", "NaCl"], "difficulty": "medium", "points": 250},
+    {"reactants": ["Fe", "Cl2"], "products": ["FeCl3"], "difficulty": "medium", "points": 250},
+    {"reactants": ["C2H6O", "O2"], "products": ["CO2", "H2O"], "difficulty": "medium", "points": 250},
+
+    # Hard (Base: 500 pts)
+    {"reactants": ["CH3OH", "O2"], "products": ["CO2", "H2O"], "difficulty": "hard", "points": 500},
+    {"reactants": ["Ca(OH)2", "H3PO4"], "products": ["Ca3(PO4)2", "H2O"], "difficulty": "hard", "points": 500},
+    {"reactants": ["(NH4)2SO4", "NaOH"], "products": ["Na2SO4", "NH3", "H2O"], "difficulty": "hard", "points": 500},
+    {"reactants": ["Al2(SO4)3", "NaOH"], "products": ["Al(OH)3", "Na2SO4"], "difficulty": "hard", "points": 500},
+    {"reactants": ["C6H12O6"], "products": ["C2H5OH", "CO2"], "difficulty": "hard", "points": 500},
 ]
 
 def get_dynamic_equation(current_score: int, previous_eq: dict | None = None) -> dict:

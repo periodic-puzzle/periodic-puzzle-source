@@ -76,6 +76,15 @@ PROGRESSION_TIERS = [
     {"min_score": 4500, "tier": 5, "balance_threshold": 4,  "balance_chance": 0.25, "allow_compounds": True},
 ]
 
+# Player-facing copy shown in a toast the moment a new tier is reached.
+# Keyed by tier number (tier 1 is the starting tier, so it has no "unlock").
+TIER_UNLOCK_MESSAGES = {
+    2: "Tier 2 unlocked! Compounds start appearing.",
+    3: "Tier 3 unlocked! Charges are harder to balance.",
+    4: "Tier 4 unlocked! Watch your ion balance closely.",
+    5: "Tier 5 unlocked! Maximum difficulty reached.",
+}
+
 class BalancingChallenge:
     def __init__(self, pos: tuple[int, int], species: "ChemicalSpecies", coefficients: list[int]):
         self.pos = pos
@@ -101,6 +110,9 @@ class GameGrid:
         self.score_button: None | Button = None
         self.game_over: int = False
         self.active_challenges: dict[tuple[int, int], BalancingChallenge] = {}
+        # Total number of successful merges this session, surfaced on the
+        # game-over summary panel.
+        self.compounds_formed: int = 0
 
     def _map_coords(self, line_idx: int, outer_idx: int, direction: Directions) -> tuple[int, int]:
         max_idx = self.grid_size - 1
@@ -156,17 +168,23 @@ class GameGrid:
                     merged=e.merged
                 ))
 
+        self.compounds_formed += sum(1 for e in grid_events if e.merged)
         return grid_events
 
     def create_element(self, species: "ChemicalSpecies", location: tuple[int, int]):
         self.grid[location[1]][location[0]] = species
         
-    def pop(self, coords: tuple[int, int]):
+    def pop(self, coords: tuple[int, int]) -> int:
+        """Removes the tile at coords, adds its points to the score, and
+        returns the points earned so the caller can show feedback (e.g. a
+        floating '+N' popup) without having to re-derive it."""
         species = self.grid[coords[1]][coords[0]]
-        self.score += getattr(species, "points", 10)
+        points = getattr(species, "points", 10)
+        self.score += points
         self.grid[coords[1]][coords[0]] = None
         if coords in self.active_challenges:
             del self.active_challenges[coords]
+        return points
         
     def get_current_tier_config(self) -> dict:
         current_config = PROGRESSION_TIERS[0]
@@ -217,8 +235,14 @@ class GameGrid:
         """Creates a non-blocking balancing requirement for a merged tile."""
         self.active_challenges[pos] = BalancingChallenge(pos, species, target_coeffs)
 
-    def clear_temporary_compounds(self) -> list[tuple[int, int]]:
-        cleared_positions = []
+    def clear_temporary_compounds(self) -> list[tuple[tuple[int, int], int]]:
+        """Auto-clears any tile that can't be kept, awarding its points.
+
+        Returns a list of (pos, points_earned) pairs, one per cleared tile,
+        so callers (e.g. GridView) can spawn a floating score popup at each
+        cleared position instead of guessing the amount.
+        """
+        cleared: list[tuple[tuple[int, int], int]] = []
         for row_idx, row in enumerate(self.grid):
             for col_idx, species in enumerate(row):
                 pos = (col_idx, row_idx)
@@ -227,5 +251,5 @@ class GameGrid:
                     points: int = getattr(species, "points", 10) 
                     self.score += points
                     self.grid[row_idx][col_idx] = None
-                    cleared_positions.append(pos)
-        return cleared_positions
+                    cleared.append((pos, points))
+        return cleared

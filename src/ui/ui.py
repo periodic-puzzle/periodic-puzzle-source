@@ -87,6 +87,15 @@ class Button(UIElement):
             border_radius=self.theme.border_radius,
         )
 
+        if self.theme.border_color and self.theme.border_width > 0:
+            pygame.draw.rect(
+                surface,
+                self.theme.border_color,
+                self.rect,
+                width=self.theme.border_width,
+                border_radius=self.theme.border_radius,
+            )
+
         if self.text:
             text_surf = get_fitted_text_surface(
                 text=self.text,
@@ -129,6 +138,15 @@ class TextBox(UIElement):
             self.rect,
             border_radius=self.theme.border_radius,
         )
+
+        if self.theme.border_color and self.theme.border_width > 0:
+            pygame.draw.rect(
+                surface,
+                self.theme.border_color,
+                self.rect,
+                width=self.theme.border_width,
+                border_radius=self.theme.border_radius,
+            )
 
         if self.text:
             text_surf = get_fitted_text_surface(

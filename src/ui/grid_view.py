@@ -3,6 +3,7 @@ import pygame
 from src.chemistry.species import ChemicalSpecies, FinishedCompound
 from src.sliding.sliding import GameGrid, MoveEvent
 from src.ui.animated_tile import AnimMode, AnimatedTile
+from src.ui.score_popup import ScorePopup
 from src.ui import UIManager, Button
 from src.ui.group_theme import group_themes
 from src.ui.theme import DefaultButtonTheme
@@ -57,7 +58,16 @@ class GridView:
         self.active_slide_targets: set[tuple[int, int]] = set()
         self.pending_pop_positions: list[tuple[int, int]] = []
         self.pending_spawn: tuple[tuple[int, int], ChemicalSpecies] | None = None
-        
+
+        # Floating "+N" score feedback, drawn on top of everything else.
+        self.score_popups: list[ScorePopup] = []
+
+        # How many reactions happened in the most recently triggered swipe.
+        # Callers (e.g. main.py) can poll and reset this via
+        # `consume_last_chain_count()` right after dispatching a swipe, to
+        # show a "Chain xN!" toast for multi-reaction moves.
+        self._last_chain_count: int = 0
+
         if not pygame.font.get_init():
             pygame.font.init()
 
@@ -72,6 +82,13 @@ class GridView:
             self.manager.remove(btn)
         self.static_buttons.clear()
         self._bound_species.clear()
+
+    def consume_last_chain_count(self) -> int:
+        """Returns the number of reactions from the last triggered swipe,
+        then resets it so it's only reported once per swipe."""
+        count = self._last_chain_count
+        self._last_chain_count = 0
+        return count
 
     def trigger_move(
         self,
@@ -107,6 +124,8 @@ class GridView:
 
             if event.merged and event.to_pos not in self.pending_pop_positions:
                 self.pending_pop_positions.append(event.to_pos)
+
+        self._last_chain_count = len(self.pending_pop_positions)
 
         if spawn_pos and spawn_species:
             self.pending_spawn = (spawn_pos, spawn_species)
@@ -145,6 +164,15 @@ class GridView:
         else:
             for tile in self.wiggle_tiles:
                 tile.draw(surface)
+
+        # 4. Update & Draw Score Popups (always on top, independent of
+        # whether the board is mid-animation)
+        if self.score_popups:
+            for popup in self.score_popups:
+                popup.update(dt)
+            self.score_popups = [p for p in self.score_popups if not p.is_finished]
+            for popup in self.score_popups:
+                popup.draw(surface)
 
     def _update_wiggle_tiles(self, grid: GameGrid, cell_size: tuple[int, int], offset: tuple[int, int]):
         """Ensures active wiggle tiles exist for all finished clickable compounds."""
@@ -193,7 +221,10 @@ class GridView:
                 self.pop_spawn_tiles.append(pop_tile)
 
         self.pending_pop_positions.clear()
-        grid.clear_temporary_compounds()
+
+        for (col, row), points in grid.clear_temporary_compounds():
+            px = (col * cell_w + offset_x + cell_w / 2, row * cell_h + offset_y + cell_h / 2)
+            self.score_popups.append(ScorePopup(points, px))
 
         if self.pending_spawn:
             pos, species = self.pending_spawn
@@ -291,7 +322,9 @@ class GridView:
                                         mode=AnimMode.POP
                                     )
                                     self.pop_spawn_tiles.append(pop_tile)
-                                    grid.pop((c, r))
+                                    points = grid.pop((c, r))
+                                    popup_px = (rect_pos[0] + cell_size[0] / 2, rect_pos[1] + cell_size[1] / 2)
+                                    self.score_popups.append(ScorePopup(points, popup_px))
                             return cb
 
                         btn.on("click", callback=make_callback(row_idx, col_idx, species, btn.rect.topleft))
