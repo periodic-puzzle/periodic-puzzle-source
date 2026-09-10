@@ -32,6 +32,11 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
 
+      - name: Rebuild PyInstaller Bootloader
+        run: |
+          pip install wheel setuptools
+          pip install --no-binary pyinstaller pyinstaller
+          
       - name: Build application with PyInstaller
         run: |
           pyinstaller --windowed --name "Periodic Puzzle" --add-data "assets;assets" main.py
