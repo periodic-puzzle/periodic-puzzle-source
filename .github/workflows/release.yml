@@ -34,7 +34,7 @@ jobs:
 
       - name: Build application with PyInstaller
         run: |
-          pyinstaller --windowed --name "Periodic Puzzle" main.py
+          pyinstaller --windowed --name "Periodic Puzzle" --add-data "assets;assets" main.py
 
       - name: Install Inno Setup
         run: |
