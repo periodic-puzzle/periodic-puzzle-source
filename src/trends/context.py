@@ -3,7 +3,7 @@ from src.trends.model import get_random_challenge, ElementData
 from src.ui.ui import Button, TextBox, UIManager
 from src.ui.theme import ClickableTheme, HoverableTheme
 from src.utils.save_manager import load_high_scores, save_high_score
-
+from src.ui.theme import CorrectTheme, IncorrectTheme
 GAME_WIDTH = 600
 GAME_HEIGHT = 600
 
@@ -18,7 +18,7 @@ TEXT_PRIMARY = (40, 45, 55)
 NEUTRAL_BIN_THEME = ClickableTheme(
     background_color=(235, 238, 242), text_color=(60, 65, 75),
     hover_color=(225, 228, 235), pressed_color=(210, 215, 222),
-    font_size=16, border_radius=8
+    font_size=20, border_radius=10
 )
 
 
@@ -90,7 +90,6 @@ class PeriodicTrendsCtx:
 
         # Spawning Parameters (Time-based spawning)
         self.cards: list[SimpleCard] = []
-        self.spawn_interval = 1.5  # Spawns a new element every 2 seconds
         self.spawn_timer = 0.0
 
         # Drop Bins Setup
@@ -99,19 +98,25 @@ class PeriodicTrendsCtx:
             "Metalloid": pygame.Rect(225, 420, 150, 90),
             "Non-Metal": pygame.Rect(410, 420, 150, 90),
         }
+        
+        self.bin_ui: dict[str, Button] = {}
         for label, rect in self.bins.items():
-            self.ui.add(Button(rect, label, theme=NEUTRAL_BIN_THEME))
+            button = Button(rect, label, theme=NEUTRAL_BIN_THEME)
+            self.ui.add(button)
+            self.bin_ui[label] = button
 
         # Header Prompt
-        self.prompt_ui = TextBox(
+        self.prompt_ui: TextBox | None = TextBox(
             pygame.Rect((GAME_WIDTH - 440) // 2, 70, 440, 40),
             "Classify elements into their chemical group"
         )
         self.ui.add(self.prompt_ui)
 
-        self.feedback_ui: TextBox | None = None
         self.spawn_next_element()
-
+    
+    @property
+    def spawn_interval(self):
+        return max(1, 3.0 - self.streak / 7)
     def spawn_next_element(self) -> None:
         challenge = get_random_challenge()
         element = challenge.elements[0]
@@ -151,38 +156,42 @@ class PeriodicTrendsCtx:
             if bin_rect.colliderect(card.rect):
                 dropped_in_bin = True
                 if category == card.element.category:
-                    self._on_correct(card)
+                    self._on_correct(card, category)
                 else:
-                    self._on_incorrect(card, f"{card.element.symbol} is a {card.element.category}")
+                    self._on_incorrect(card, category)
                 break
 
         if not dropped_in_bin:
             card.rect.y = 245
 
-    def _on_correct(self, card: SimpleCard) -> None:
+    def _on_correct(self, card: SimpleCard, category: str) -> None:
         self.streak += 1
+        if self.prompt_ui:
+            self.prompt_ui = None
+        for value in self.bin_ui.values():
+            value.theme = NEUTRAL_BIN_THEME
         if self.streak > self.high_streak:
             self.high_streak = self.streak
             save_high_score("periodic_trends", self.high_streak)
-
-        if self.feedback_ui:
-            self.ui.remove(self.feedback_ui)
-            self.feedback_ui = None
-
+        self.bin_ui[category].theme = CorrectTheme
         if card in self.cards:
             self.cards.remove(card)
 
-    def _on_incorrect(self, card: SimpleCard, message: str) -> None:
+    def _on_incorrect(self, card: SimpleCard, wrong_category: str | None = None) -> None:
         self.streak = 0
-        if self.feedback_ui:
-            self.ui.remove(self.feedback_ui)
-
-        self.feedback_ui = TextBox(
-            pygame.Rect((GAME_WIDTH - 400) // 2, 170, 400, 35),
-            message
-        )
-        self.ui.add(self.feedback_ui)
-
+        if self.prompt_ui:
+            self.prompt_ui = None
+        if wrong_category is None:
+            self.prompt_ui = TextBox(
+                pygame.Rect((GAME_WIDTH - 440) // 2, 70, 440, 40),
+                f"Missed {card.element.name}"
+            )
+            self.ui.add(self.prompt_ui)
+        for value in self.bin_ui.values():
+            value.theme = NEUTRAL_BIN_THEME
+        self.bin_ui[card.element.category].theme = CorrectTheme
+        if wrong_category:
+            self.bin_ui[wrong_category].theme = IncorrectTheme
         if card in self.cards:
             self.cards.remove(card)
 
@@ -199,7 +208,7 @@ class PeriodicTrendsCtx:
         for card in list(self.cards):
             card.update_position(self.belt_speed)
             if card.rect.x > GAME_WIDTH:
-                self._on_incorrect(card, f"Missed {card.element.symbol}!")
+                self._on_incorrect(card)
 
     def render(self, target_surface: pygame.Surface, dt: float) -> None:
         target_surface.fill(BG_COLOR)
