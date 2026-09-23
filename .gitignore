@@ -9,7 +9,7 @@ archive/
 *.zip
 *.7z
 .env.local
-*.ico
+icon.ico
 highscores.json
 *.spec
 .vercel
