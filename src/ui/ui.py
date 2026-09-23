@@ -8,6 +8,7 @@ from src.ui.theme import ClickableTheme, DefaultButtonTheme, DefaultTextboxTheme
 import pygame
 from src.utils.utils import get_fitted_text_surface
 from src.constants.constants import ASSETS
+from src.audio.sfx import sfx
 
 EventCallback = Callable[..., None]
 
@@ -37,6 +38,13 @@ class UIElement:
 
         self._events: dict[str, list[EventCallback]] = {}
         self.id_ = id_
+
+        # Name of the SFX played when this element is clicked. Set to
+        # None to silence an element (e.g. plain labels), or to another
+        # key from SOUND_FILES to override it (e.g. grid tiles use
+        # "tile_pop"). Only fires if the element actually has a click
+        # handler bound, so empty grid cells stay quiet.
+        self.click_sound: str | None = "ui_click"
 
     def on(self, event_name: str, callback: EventCallback) -> None:
         self._events.setdefault(event_name, []).append(callback)
@@ -272,6 +280,8 @@ class UIManager:
                 self.pressed.emit("release")
 
                 if self.pressed is self.hovered:
+                    if self.pressed.click_sound and self.pressed._events.get("click"):
+                        sfx.play(self.pressed.click_sound)
                     self.pressed.emit("click")
 
                 self.pressed = None

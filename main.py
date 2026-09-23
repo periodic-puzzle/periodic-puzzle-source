@@ -17,10 +17,14 @@ from src.utils.save_manager import load_high_scores, save_high_score
 from src.balancing.context import BalancingCtx
 from src.sliding.tutorial.manager import SlidingTutorialManager
 from src.constants.constants import ASSETS
+from src.audio.sfx import sfx
+from src.ui.confetti import ConfettiSystem
+from src.ui.audio_settings import AudioSettingsWidget
 # Initialize Game Subsystems
 register_species()
 register_reactions()
 pygame.init()
+sfx.init()  # boots the mixer; silently no-ops if no audio device
 pygame.display.set_caption("Periodic Puzzle")
 icon = pygame.image.load(ASSETS / "images" / "window_icon.png")
 pygame.display.set_icon(icon)
@@ -55,6 +59,14 @@ class SlidingCtx:
         self._gesture_start: tuple[float, float] | None = None
         self.SWIPE_THRESHOLD = 40  # pixels a drag must cover to count as a swipe
 
+        # Holds at most one direction: whatever the player pressed most
+        # recently while a slide/pop/spawn animation was still playing.
+        # Deliberately a single slot rather than a growing queue - if we
+        # queued every spammed keypress, a burst of input could leave a
+        # long line of moves to play out one-by-one long after the player
+        # stopped pressing anything. Only the latest input survives.
+        self._queued_direction: Directions | None = None
+
 
         # Standard Score UI
         self.score = TextBox(pygame.Rect(GAME_WIDTH - 100, 0, 100, 50), "Score: 0")
@@ -70,8 +82,17 @@ class SlidingCtx:
 
         # Navigation UI
         self.back = Button(pygame.Rect(10, 10, 80, 40), "Back")
+        self.back.click_sound = "ui_back"
         self.back.on("click", lambda: self.ctx_manager.switch_to("menu"))
         self.ui.add(self.back)
+
+        # Celebration particles. Drawn last in render() so it floats over
+        # the board, the toast banner and the game-over card alike.
+        self.confetti = ConfettiSystem((GAME_WIDTH, GAME_HEIGHT))
+
+        # Mute toggle, bottom-right corner - clear of the grid, score UI,
+        # and the game-over panel on every screen size this game runs at.
+        self.audio_widget = AudioSettingsWidget((GAME_WIDTH - 40, GAME_HEIGHT - 40))
 
         # --- Toast banner (tier unlocks, reaction chains) -------------------
         # Hidden by default; update() drives visibility/text and pops the
@@ -159,6 +180,8 @@ class SlidingCtx:
         # manager for click/hover handling, so we feed it events manually.
         self.grid_ui = UIManager()
         self.grid_view = GridView(self.grid_ui, self.grid.grid_size)
+        # Let the grid fire its own confetti when a compound is tapped.
+        self.grid_view.confetti = self.confetti
 
         # Track the tier the player was on last frame so a toast can fire
         # exactly once, the moment a new tier is actually reached. Must
@@ -186,6 +209,9 @@ class SlidingCtx:
         self.previous_tier = self.grid.get_current_tier_config()["tier"]
 
     def handle_event(self, event: pygame.event.Event) -> None:
+        if self.audio_widget.handle_event(event):
+            return
+
         self.ui.process_event(event)
         self.grid_ui.process_event(event)
 
@@ -275,9 +301,23 @@ class SlidingCtx:
         self._dispatch_direction(direction)
 
     def _dispatch_direction(self, direction: Directions) -> None:
-        if self.grid.game_over or self.grid_view.is_animating:
+        if self.grid.game_over:
             return
 
+        if self.grid_view.is_animating:
+            # Don't drop the input silently and don't pile up a queue
+            # either - just remember the latest direction so it fires
+            # the instant the current animation finishes.
+            self._queued_direction = direction
+            # Give feedback for every press, even the ones that don't
+            # land a move yet - otherwise spamming feels like most of
+            # your clicks vanished into nothing.
+            sfx.play("move")
+            return
+
+        self._perform_move(direction)
+
+    def _perform_move(self, direction: Directions, already_ticked: bool = False) -> None:
         # 1. Tutorial Movement Branch
         if self.in_tutorial and self.tutorial_mgr:
             # NOTE: self.grid is intentionally left pointing at the grid
@@ -290,6 +330,14 @@ class SlidingCtx:
             move_events = self.tutorial_mgr.handle_swipe(direction)
 
             if move_events:
+                merged = any(e.merged for e in move_events)
+                # The generic click tick already covers a plain "move",
+                # but a merge is a distinct, more exciting sound - always
+                # play that one even if this move was queued.
+                if merged:
+                    sfx.play("merge")
+                elif not already_ticked:
+                    sfx.play("move")
                 self.grid_view.trigger_move(
                     move_events=move_events,
                     cell_size=self.cell_size,
@@ -313,12 +361,41 @@ class SlidingCtx:
                 )
 
                 chain_count = self.grid_view.consume_last_chain_count()
+
+                # Audio feedback scales with the size of the move: a quiet
+                # tick for a plain slide, a merge blip for one reaction,
+                # and a distinct chime plus confetti for a chain. Merge
+                # and chain sounds always play, queued or not - only the
+                # plain "move" tick gets skipped when the click tick
+                # already covered it.
                 if chain_count >= 2:
+                    sfx.play_chain("merge", chain_count, max_notes=4)
                     self.push_toast(f"Chain x{chain_count}!")
+                    self.confetti.burst(
+                        (GAME_WIDTH // 2, GAME_HEIGHT // 2),
+                        count=18 + 10 * chain_count,
+                    )
+                elif chain_count == 1:
+                    sfx.play("merge")
+                elif move_events and not already_ticked:
+                    sfx.play("move")
             except IndexError:
                 self.grid.game_over = True
 
     def update(self, dt: float) -> None:
+        self.confetti.update(dt)
+
+        # Fire off a queued input the moment the board's free to move
+        # again. Checked before the animation-driving grid_view render
+        # step runs again, so it slots in as soon as possible without
+        # ever stacking more than one move deep.
+        if not self.grid_view.is_animating and self._queued_direction is not None:
+            direction, self._queued_direction = self._queued_direction, None
+            # The click tick already fired the moment this direction was
+            # queued, so don't replay the plain "move" sound - but a
+            # merge/chain is still worth its own distinct sound.
+            self._perform_move(direction, already_ticked=True)
+
         # --- Toast banner timing (runs in both tutorial & normal play) -----
         if self.toast_timer > 0:
             self.toast_timer -= dt
@@ -338,8 +415,11 @@ class SlidingCtx:
             # Only apply a queued step transition once the slide/pop/spawn
             # animation for the reaction that triggered it has fully played.
             if not self.grid_view.is_animating:
+                step_before = (self.tutorial_mgr.step, self.tutorial_mgr.substep)
                 self.tutorial_mgr.advance_if_pending()
                 self.grid = self.tutorial_mgr.game_grid
+                if (self.tutorial_mgr.step, self.tutorial_mgr.substep) != step_before:
+                    sfx.play("tutorial_step")
 
                 if self.tutorial_mgr.is_completed:
                     self.finish_tutorial()
@@ -357,6 +437,8 @@ class SlidingCtx:
                 message = TIER_UNLOCK_MESSAGES.get(current_tier)
                 if message:
                     self.push_toast(message)
+                sfx.play("tier_up")
+                self.confetti.rain(count=70)
                 self.previous_tier = current_tier
 
             # Game Over panel: populate stats once, the frame it appears.
@@ -368,6 +450,15 @@ class SlidingCtx:
                     "New High Score!" if beat_high_score else f"High Score: {self.high_score}"
                 )
                 self.gameover_compounds_line.text = f"Compounds Formed: {self.grid.compounds_formed}"
+
+                # A new record is a win, not a loss - celebrate it instead
+                # of playing the usual game-over sting.
+                if beat_high_score:
+                    sfx.play("high_score")
+                    self.confetti.cannons(count=55)
+                else:
+                    sfx.play("game_over")
+
                 for el in self.gameover_elements:
                     el.visible = True
             elif not self.grid.game_over:
@@ -402,6 +493,12 @@ class SlidingCtx:
             )
 
         self.ui.draw(target_surface)
+
+        # Confetti goes on top of absolutely everything, including the
+        # game-over modal.
+        self.confetti.draw(target_surface)
+
+        self.audio_widget.draw(target_surface)
 
 MODE_BUTTON_THEMES = {
     "Sliding": ClickableTheme(
@@ -486,7 +583,15 @@ class MenuCtx:
         mm_btn.on("click", lambda: self.ctx_manager.switch_to("periodic_trends"))
         self.ui.add(mm_btn)
 
+        # Optional: loops assets/sounds/music_menu.ogg if that file exists.
+        sfx.play_music("menu")
+
+        # Full mute + volume control, top-right corner.
+        self.audio_widget = AudioSettingsWidget((GAME_WIDTH - 168, 16), compact=False)
+
     def handle_event(self, event: pygame.event.Event) -> None:
+        if self.audio_widget.handle_event(event):
+            return
         self.ui.process_event(event)
 
     def update(self, dt: float) -> None:
@@ -495,6 +600,7 @@ class MenuCtx:
     def render(self, target_surface: pygame.Surface, dt: float = 0.016) -> None:
         target_surface.fill((245, 241, 232))
         self.ui.draw(target_surface)
+        self.audio_widget.draw(target_surface)
 
 
 class CtxManager:
@@ -538,6 +644,10 @@ async def main():
         if ctx_manager.active_context:
             ctx_manager.active_context.update(dt)
             ctx_manager.active_context.render(screen, dt)
+
+        # Drains any staggered chain notes queued by sfx.play_chain(),
+        # regardless of which context is active.
+        sfx.update(dt)
 
         pygame.display.flip()
         await asyncio.sleep(0)

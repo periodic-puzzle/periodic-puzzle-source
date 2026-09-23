@@ -14,6 +14,9 @@ from src.ui.theme import (
     PAGE_BACKGROUND,
 )
 from src.utils.save_manager import load_high_scores, save_high_score
+from src.audio.sfx import sfx
+from src.ui.confetti import ConfettiSystem
+from src.ui.audio_settings import AudioSettingsWidget
 
 GAME_WIDTH = 600
 GAME_HEIGHT = 600
@@ -50,8 +53,14 @@ class BalancingCtx:
 
         # Navigation
         self.back_btn = Button(pygame.Rect(10, 10, 60, 40), "Back")
+        self.back_btn.click_sound = "ui_back"
         self.back_btn.on("click", lambda: self.ctx_manager.switch_to("menu"))
         self.ui.add(self.back_btn)
+
+        self.confetti = ConfettiSystem((GAME_WIDTH, GAME_HEIGHT))
+
+        # Mute toggle, bottom-right corner.
+        self.audio_widget = AudioSettingsWidget((GAME_WIDTH - 40, GAME_HEIGHT - 40))
 
         self.title_ui = TextBox(
             pygame.Rect(75, 12, 340, 36), "Balance the Equation", theme=TitleTheme
@@ -241,6 +250,15 @@ class BalancingCtx:
                 self.high_streak = self.streak
                 save_high_score("balancing", self.high_streak)
 
+            # Every 5th in a row gets its own fanfare + confetti, so a
+            # long run feels like it's building to something.
+            if self.streak % 5 == 0:
+                sfx.play("streak")
+                self.confetti.rain(count=70)
+            else:
+                sfx.play("correct")
+                self.confetti.burst((GAME_WIDTH // 2, 250), count=26)
+
             self.feedback_ui.text = "Correct!"
             self.feedback_ui.theme = CorrectTheme
             self.locked = True
@@ -248,10 +266,12 @@ class BalancingCtx:
             self._set_controls_enabled(False)
         else:
             self.streak = 0
+            sfx.play("wrong")
             self.feedback_ui.text = "Not balanced yet — streak reset. Try again."
             self.feedback_ui.theme = IncorrectTheme
 
     def update(self, dt: float) -> None:
+        self.confetti.update(dt)
         self.streak_ui.text = f"Streak: {self.streak}"
         self.high_streak_ui.text = f"Best: {self.high_streak}"
 
@@ -261,8 +281,12 @@ class BalancingCtx:
                 self.load_next_equation()
 
     def handle_event(self, event: pygame.event.Event) -> None:
+        if self.audio_widget.handle_event(event):
+            return
         self.ui.process_event(event)
 
     def render(self, target_surface: pygame.Surface, dt: float) -> None:
         target_surface.fill(PAGE_BACKGROUND)
         self.ui.draw(target_surface)
+        self.confetti.draw(target_surface)
+        self.audio_widget.draw(target_surface)

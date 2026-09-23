@@ -4,6 +4,9 @@ from src.ui.ui import Button, TextBox, UIManager
 from src.ui.theme import ClickableTheme, HoverableTheme
 from src.utils.save_manager import load_high_scores, save_high_score
 from src.ui.theme import CorrectTheme, IncorrectTheme
+from src.audio.sfx import sfx
+from src.ui.confetti import ConfettiSystem
+from src.ui.audio_settings import AudioSettingsWidget
 GAME_WIDTH = 600
 GAME_HEIGHT = 600
 
@@ -67,8 +70,14 @@ class PeriodicTrendsCtx:
 
         # Navigation & Streak
         self.back_btn = Button(pygame.Rect(10, 10, 60, 40), "Back")
+        self.back_btn.click_sound = "ui_back"
         self.back_btn.on("click", lambda: self.ctx_manager.switch_to("menu"))
         self.ui.add(self.back_btn)
+
+        self.confetti = ConfettiSystem((GAME_WIDTH, GAME_HEIGHT))
+
+        # Mute toggle, bottom-right corner.
+        self.audio_widget = AudioSettingsWidget((GAME_WIDTH - 40, GAME_HEIGHT - 40))
 
         self.streak = 0
         scores = load_high_scores()
@@ -102,6 +111,7 @@ class PeriodicTrendsCtx:
         self.bin_ui: dict[str, Button] = {}
         for label, rect in self.bins.items():
             button = Button(rect, label, theme=NEUTRAL_BIN_THEME)
+            button.click_sound = None  # drop target, not a real button
             self.ui.add(button)
             self.bin_ui[label] = button
 
@@ -124,6 +134,8 @@ class PeriodicTrendsCtx:
         self.cards.append(card)
 
     def handle_event(self, event: pygame.event.Event) -> None:
+        if self.audio_widget.handle_event(event):
+            return
         self.ui.process_event(event)
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -131,6 +143,7 @@ class PeriodicTrendsCtx:
             for card in reversed(self.cards):
                 if card.rect.collidepoint(event.pos):
                     card.is_dragging = True
+                    sfx.play("card_pickup")
                     card.drag_offset_x = card.rect.x - event.pos[0]
                     card.drag_offset_y = card.rect.y - event.pos[1]
                     # Move grabbed card to top of render list
@@ -166,6 +179,16 @@ class PeriodicTrendsCtx:
 
     def _on_correct(self, card: SimpleCard, category: str) -> None:
         self.streak += 1
+
+        # Confetti fires from the bin the card landed in, so the feedback
+        # is tied to the spot the player was looking at.
+        bin_center = self.bins[category].center
+        if self.streak % 5 == 0:
+            sfx.play("streak")
+            self.confetti.rain(count=70)
+        else:
+            sfx.play("card_drop")
+            self.confetti.burst(bin_center, count=24)
         if self.prompt_ui:
             self.prompt_ui = None
         for value in self.bin_ui.values():
@@ -179,6 +202,7 @@ class PeriodicTrendsCtx:
 
     def _on_incorrect(self, card: SimpleCard, wrong_category: str | None = None) -> None:
         self.streak = 0
+        sfx.play("card_miss")
         if self.prompt_ui:
             self.prompt_ui = None
         if wrong_category is None:
@@ -196,6 +220,7 @@ class PeriodicTrendsCtx:
             self.cards.remove(card)
 
     def update(self, dt: float) -> None:
+        self.confetti.update(dt)
         self.streak_ui.text = f"Streak: {self.streak}"
 
         # Continuously spawn new elements over time
@@ -221,3 +246,6 @@ class PeriodicTrendsCtx:
         # Render cards
         for card in self.cards:
             card.draw(target_surface, self.font_lg, self.font_sm)
+
+        self.confetti.draw(target_surface)
+        self.audio_widget.draw(target_surface)

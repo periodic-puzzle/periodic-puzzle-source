@@ -7,7 +7,10 @@ from src.ui.score_popup import ScorePopup
 from src.ui import UIManager, Button
 from src.ui.group_theme import group_themes
 from src.ui.theme import DefaultButtonTheme
-
+from src.audio.sfx import sfx
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from src.ui.confetti import ConfettiSystem
 def draw_lewis_dots_overlay(surface: pygame.Surface, rect: pygame.Rect, open_dots: int, color: tuple[int, int, int] | tuple[int, int, int, int]):
     """Draws up to 8 valence dots in pairs directly onto a target screen rect."""
     if open_dots <= 0:
@@ -61,6 +64,11 @@ class GridView:
 
         # Floating "+N" score feedback, drawn on top of everything else.
         self.score_popups: list[ScorePopup] = []
+
+        # Optional ConfettiSystem, injected by the owning context (see
+        # SlidingCtx.__init__). Left as None so GridView stays usable
+        # without one.
+        self.confetti: ConfettiSystem | None = None
 
         # How many reactions happened in the most recently triggered swipe.
         # Callers (e.g. main.py) can poll and reset this via
@@ -222,7 +230,12 @@ class GridView:
 
         self.pending_pop_positions.clear()
 
-        for (col, row), points in grid.clear_temporary_compounds():
+        cleared = grid.clear_temporary_compounds()
+        if cleared:
+            # One sound for the whole batch, not one per tile - otherwise a
+            # big chain turns into a burst of overlapping identical blips.
+            sfx.play("auto_clear")
+        for (col, row), points in cleared:
             px = (col * cell_w + offset_x + cell_w / 2, row * cell_h + offset_y + cell_h / 2)
             self.score_popups.append(ScorePopup(points, px))
 
@@ -258,6 +271,9 @@ class GridView:
                         cell_h
                     )
                     btn = Button(rect=rect, text="", padding=int(cell_h * 0.2))
+                    # Grid cells are only audible when they hold a
+                    # clickable finished compound (bound just below).
+                    btn.click_sound = "tile_pop"
                     self.static_buttons.append(btn)
                     self._bound_species.append(_UNBOUND)
                     self.manager.add(btn)
@@ -325,6 +341,15 @@ class GridView:
                                     points = grid.pop((c, r))
                                     popup_px = (rect_pos[0] + cell_size[0] / 2, rect_pos[1] + cell_size[1] / 2)
                                     self.score_popups.append(ScorePopup(points, popup_px))
+                                    if self.confetti is not None:
+                                        # Small, tile-sized pop. Scales a
+                                        # little with how valuable the
+                                        # compound was.
+                                        self.confetti.burst(
+                                            popup_px,
+                                            count=min(30, 10 + points // 10),
+                                            power=300.0,
+                                        )
                             return cb
 
                         btn.on("click", callback=make_callback(row_idx, col_idx, species, btn.rect.topleft))
