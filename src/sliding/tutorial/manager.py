@@ -122,22 +122,49 @@ class SlidingTutorialManager:
 
     def get_instruction_text(self, is_touch: bool = False) -> str:
         action = "Swipe" if is_touch else "Press"
-        controls_hint = "" if is_touch else " (WASD / Arrow Keys)"
+        controls_hint = "" if is_touch else " (WASD or Arrow Keys)"
 
         if self.step == 0:
             directions_left = ", ".join(
                 d.name.upper() for d in Directions if d not in self.movement_directions_seen
             )
+            if not self.movement_directions_seen:
+                # First-ever instruction the player sees. Assume zero prior
+                # experience with sliding-tile games: explain what a swipe
+                # even does before asking for one.
+                return (
+                    f"Step 1 of 4 — Get moving: every tile on the board slides "
+                    f"like a puck on ice — it skids in one direction until it "
+                    f"hits the wall or another tile. {action}{controls_hint} "
+                    f"to try it. Go: {directions_left}"
+                )
             return (
-                f"Step 0: {action}{controls_hint} to slide every tile that way! "
-                f"Try: {directions_left}"
+                f"Step 1 of 4 — Keep exploring: {action}{controls_hint} "
+                f"to try: {directions_left}"
             )
         elif self.step == 1:
-            return f"Step 1: {action} LEFT to react H + H -> H₂!"
+            return (
+                f"Step 2 of 4 — Combine tiles: two tiles merge into one new "
+                f"tile whenever they can react together. "
+                f"{action} LEFT to merge H + H into H₂ (hydrogen gas)."
+            )
         elif self.step == 2:
-            return f"Step 2: {action} LEFT to react Na + Cl -> NaCl (Table Salt)!"
+            return (
+                f"Step 3 of 4 — Mix elements: tiles don't have to match to "
+                f"merge — any two that can react together will combine. "
+                f"{action} LEFT to merge Na (sodium) and Cl (chlorine) into "
+                f"NaCl — table salt!"
+            )
         elif self.step == 3:
             if self.substep == 1:
-                return f"Step 3a: Multi-Step Chain! {action} LEFT to react H + O -> OH (Hydroxide)."
-            return f"Step 3b: {action} LEFT again to react OH + H -> H₂O (Water)!"
-        return "Tutorial Complete!"
+                return (
+                    f"Step 4 of 4 — Chain reaction: a merge doesn't always "
+                    f"finish a compound right away — sometimes it's just a "
+                    f"step toward one. {action} LEFT to merge H + O into OH, "
+                    f"a step toward water."
+                )
+            return (
+                f"Step 4 of 4 — One more merge: {action} LEFT again to "
+                f"combine OH with the new H tile and form H₂O — water!"
+            )
+        return "Tutorial complete! Go build some compounds of your own."

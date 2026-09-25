@@ -45,7 +45,7 @@ class Context(Protocol):
 
 
 class SlidingCtx:
-    def __init__(self, ctx_manager) -> None:
+    def __init__(self, ctx_manager, start_in_tutorial: bool = False) -> None:
         self.ctx_manager = ctx_manager
         self.ui = UIManager()
         
@@ -150,8 +150,12 @@ class SlidingCtx:
         self.gameover_panel_rect = pygame.Rect(panel_left - 20, panel_top - 15, 380, 260)
         self._gameover_panel_built = False
 
-        # Determine if tutorial should run
-        self.in_tutorial = self.high_score == 0
+        # Tutorial runs automatically the first time (no high score yet),
+        # but can also be launched on demand at any time - either from the
+        # menu's "Tutorial" button or via the "Tutorial" button below,
+        # which is only shown once a high score exists (otherwise the
+        # tutorial is already running and that button would be redundant).
+        self.in_tutorial = start_in_tutorial or self.high_score == 0
 
         # Tutorial UI Components & Manager
         self.tutorial_banner = TextBox(
@@ -160,6 +164,14 @@ class SlidingCtx:
         )
         self.skip_button = Button(pygame.Rect(10, 60, 80, 30), "Skip")
         self.skip_button.on("click", self.finish_tutorial)
+
+        # Lets a returning player jump back into the tutorial whenever they
+        # want, instead of only ever seeing it once on their very first
+        # game. Only shown outside the tutorial - see toggling below.
+        self.replay_tutorial_button = Button(pygame.Rect(10, 60, 100, 30), "Tutorial")
+        self.replay_tutorial_button.on(
+            "click", lambda: self.ctx_manager.switch_to("sliding", start_in_tutorial=True)
+        )
 
         if self.in_tutorial:
             self.tutorial_mgr = SlidingTutorialManager(grid_size=grid_size)
@@ -171,6 +183,7 @@ class SlidingCtx:
             self.grid = GameGrid(grid_size=grid_size)
             self.grid.spawn()
             self.grid.spawn()
+            self.ui.add(self.replay_tutorial_button)
 
         # GridView owns/draws its own tile buttons directly (so it can
         # layer static tiles under slide/pop/wiggle animations). It must
@@ -199,6 +212,7 @@ class SlidingCtx:
         self.in_tutorial = False
         self.ui.remove(self.tutorial_banner)
         self.ui.remove(self.skip_button)
+        self.ui.add(self.replay_tutorial_button)
 
         # Clean static buttons before recreating standard GameGrid
         self.grid_view.cleanup()
@@ -521,6 +535,11 @@ MODE_BUTTON_THEMES = {
         hover_color=(255, 195, 130), pressed_color=(230, 150, 70),
         font_size=22, border_radius=10,
     ),
+    "Tutorial": ClickableTheme(
+        background_color=(150, 150, 150), text_color=(255, 255, 255),
+        hover_color=(170, 170, 170), pressed_color=(125, 125, 125),
+        font_size=20, border_radius=10,
+    ),
 }
 
 
@@ -608,11 +627,11 @@ class CtxManager:
         self.active_context: Context | None = None
         self.active_name: str | None = None
 
-    def switch_to(self, name: str) -> None:
+    def switch_to(self, name: str, **kwargs) -> None:
         if name == "menu":
             self.active_context = MenuCtx(self)
         elif name == "sliding":
-            self.active_context = SlidingCtx(self)
+            self.active_context = SlidingCtx(self, **kwargs)
         elif name == "balancing":
             self.active_context = BalancingCtx(self)
         elif name == "naming":
